@@ -1,0 +1,12 @@
+approach:
+  x: 10
+  y: 4
+  z: 10
+leave:
+  x: 10
+  y: 4
+  z: 10
+near:
+  x: 5
+  y: 4
+  z: 5
