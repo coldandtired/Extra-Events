@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -15,14 +16,19 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class Extra_events extends JavaPlugin implements Listener
 {
 	private FileConfiguration config;
 	private Map<String, Set<Entity>> approached_players = new HashMap<String, Set<Entity>>();
 	private Map<String, Set<Entity>> leaving_players = new HashMap<String, Set<Entity>>();
+	private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
 	private PluginManager pm;
 	private int approach_x;
 	private int approach_y;
@@ -34,6 +40,7 @@ public class Extra_events extends JavaPlugin implements Listener
 	private int near_y;
 	private int near_z;
 	private boolean tick = true;
+	private WorldGuardPlugin wgp = null;
 	
 	@Override
 	public void onEnable()
@@ -52,6 +59,10 @@ public class Extra_events extends JavaPlugin implements Listener
 		leave_z = config.getInt("leave.z");
 		pm = getServer().getPluginManager();
 		pm.registerEvents(this, this);
+		
+		Plugin p = pm.getPlugin("WorldGuard");
+		if (p != null && p instanceof WorldGuardPlugin) wgp = (WorldGuardPlugin)p;
+		
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() 
 		{			 
 			public void run() {timerTick();}
@@ -70,9 +81,31 @@ public class Extra_events extends JavaPlugin implements Listener
 	private void timerTick()
 	{
 		checkNearby_Players();
+		if (wgp != null) checkRegions();
 		checkTime();
 		if (tick) pm.callEvent(new SecondTickEvent());
 		tick = !tick;
+	}
+	
+	private void checkRegions()
+	{
+		for (Player p : Bukkit.getOnlinePlayers())
+		{
+			Set<ProtectedRegion> temp = players_in_regions.containsKey(p.getName()) ? players_in_regions.get(p.getName()) : new HashSet<ProtectedRegion>();
+			Set<ProtectedRegion> sl = new HashSet<ProtectedRegion>();
+			Location loc = p.getLocation();
+			for (ProtectedRegion r : wgp.getRegionManager(p.getWorld()).getRegions().values())
+			{
+				if (!r.contains(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) continue;
+				if (!temp.contains(r)) pm.callEvent(new PlayerEnterWGRegionEvent(p, r));
+				sl.add(r);
+			}
+			temp.removeAll(sl);
+			for (ProtectedRegion r : temp) pm.callEvent(new PlayerLeaveWGRegionEvent(p, r));
+			players_in_regions.put(p.getName(), sl);
+			
+			for (ProtectedRegion r : sl) pm.callEvent(new PlayerInWGRegionEvent(p, r));
+		}
 	}
 	
  	private void checkNearby_Players()
@@ -141,7 +174,10 @@ public class Extra_events extends JavaPlugin implements Listener
 		else
 		{
 			// damaged
-			pm.callEvent(new LivingEntityDamageEvent(le, attacker, event.getCause(), event.getDamage()));
+			LivingEntityDamageEvent lede = new LivingEntityDamageEvent(le, attacker, event.getCause(), event.getDamage());
+			pm.callEvent(lede);
+			event.setDamage(lede.getDamage());
+			event.setCancelled(lede.isCancelled());
 		}
 	}
 }

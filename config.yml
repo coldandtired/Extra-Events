@@ -10,3 +10,29 @@ near:
   x: 5
   y: 4
   z: 5
+areas:
+  example:
+    world: world
+    x:
+      start: 10
+      length: 20
+    y:
+      start: 55
+      length: 5
+    z:
+      start: 100
+      length: 20
+  example2:
+    world: world
+    x:
+      middle: 10
+      radius: 20
+      ignore_first: 5
+    y:
+      middle: 5
+      radius: 5
+      ignore_first: 0
+    z:
+      middle: 10
+      radius: 20
+      ignore_first: 0
