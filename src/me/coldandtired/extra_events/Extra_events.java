@@ -1,12 +1,15 @@
 package me.coldandtired.extra_events;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -20,15 +23,16 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class Extra_events extends JavaPlugin implements Listener
 {
-	private FileConfiguration config;
 	private Map<String, Set<Entity>> approached_players = new HashMap<String, Set<Entity>>();
 	private Map<String, Set<Entity>> leaving_players = new HashMap<String, Set<Entity>>();
 	private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
+	private Map<String, Set<Area>> players_in_areas = new HashMap<String, Set<Area>>();
 	private PluginManager pm;
 	private int approach_x;
 	private int approach_y;
@@ -41,13 +45,35 @@ public class Extra_events extends JavaPlugin implements Listener
 	private int near_z;
 	private boolean tick = true;
 	private WorldGuardPlugin wgp = null;
+	private Map<String, Area> areas = new HashMap<String, Area>();	
 	
 	@Override
 	public void onEnable()
 	{
-		config = getConfig();
+		FileConfiguration config = getConfig();
 		config.options().copyDefaults(true);
 		saveConfig();
+		
+		for (String world_name : config.getConfigurationSection("areas").getKeys(false))
+		{
+			for (String area_name : config.getConfigurationSection("areas." + world_name).getKeys(false))
+			{
+				String key = world_name + "." + area_name;
+				Area area = new Area
+						(
+							world_name,
+							area_name,
+							config.getInt("areas." + key + ".x.from"),
+							config.getInt("areas." + key + ".x.to"),
+							config.getInt("areas." + key + ".y.from"),
+							config.getInt("areas." + key + ".y.to"),
+							config.getInt("areas." + key + ".z.from"),
+							config.getInt("areas." + key + ".z.to")
+						);
+				areas.put(world_name + ":" + area_name, area);
+			}
+		}
+		
 		approach_x = config.getInt("approach.x");
 		approach_y = config.getInt("approach.y");
 		approach_z = config.getInt("approach.z");
@@ -77,14 +103,78 @@ public class Extra_events extends JavaPlugin implements Listener
 		leaving_players = null;
 		pm = null;
 	}
+		
+	public List<Area> getAreas()
+	{
+		List<Area> temp = new ArrayList<Area>(areas.values());
+		if (wgp != null)
+		{
+			for (World w : Bukkit.getWorlds())
+			{
+				for (String s : wgp.getRegionManager(w).getRegions().keySet())
+				{
+					ProtectedRegion pr = wgp.getRegionManager(w).getRegion(s);
+					BlockVector min = pr.getMinimumPoint();
+					BlockVector max = pr.getMaximumPoint();
+					temp.add(new Area(w.getName(), s,
+							min.getBlockX(), max.getBlockX(),
+							min.getBlockY(), max.getBlockY(),
+							min.getBlockZ(), max.getBlockZ()));
+				}
+			}
+		}
+		
+		return temp;
+	}
+	
+	public Area getArea(String name)
+	{
+		Area a = areas.get(name);
+		if (a != null) return a;
+		if (wgp == null) return null;
+		
+		String[] names = name.split(":");
+		ProtectedRegion pr = wgp.getRegionManager(Bukkit.getWorld(names[0])).getRegion(names[1]);
+		if (pr == null) return null;
+
+		getLogger().info("b");
+		BlockVector min = pr.getMinimumPoint();
+		BlockVector max = pr.getMaximumPoint();
+		return new Area(names[0], names[1],
+				min.getBlockX(), max.getBlockX(),
+				min.getBlockY(), max.getBlockY(),
+				min.getBlockZ(), max.getBlockZ());
+	}
 	
 	private void timerTick()
 	{
 		checkNearby_Players();
 		if (wgp != null) checkRegions();
+		checkAreas();
 		checkTime();
 		if (tick) pm.callEvent(new SecondTickEvent());
 		tick = !tick;
+	}
+	
+	private void checkAreas()
+	{
+		for (Player p : Bukkit.getOnlinePlayers())
+		{
+			Set<Area> temp = players_in_areas.containsKey(p.getName()) ? players_in_areas.get(p.getName()) : new HashSet<Area>();
+			Set<Area> sl = new HashSet<Area>();
+			Location loc = p.getLocation();
+			for (Area a : areas.values())
+			{
+				if (!a.isIn_area(loc)) continue;
+				if (!temp.contains(a)) pm.callEvent(new PlayerEnterAreaEvent(p, a));
+				sl.add(a);
+			}
+			temp.removeAll(sl);
+			for (Area a : temp) pm.callEvent(new PlayerLeaveAreaEvent(p, a));
+			players_in_areas.put(p.getName(), sl);
+			
+			for (Area a : sl) pm.callEvent(new PlayerInAreaEvent(p, a));
+		}
 	}
 	
 	private void checkRegions()
@@ -97,14 +187,14 @@ public class Extra_events extends JavaPlugin implements Listener
 			for (ProtectedRegion r : wgp.getRegionManager(p.getWorld()).getRegions().values())
 			{
 				if (!r.contains(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) continue;
-				if (!temp.contains(r)) pm.callEvent(new PlayerEnterWGRegionEvent(p, r));
+				if (!temp.contains(r)) pm.callEvent(new PlayerEnterAreaEvent(p, r));
 				sl.add(r);
 			}
 			temp.removeAll(sl);
-			for (ProtectedRegion r : temp) pm.callEvent(new PlayerLeaveWGRegionEvent(p, r));
+			for (ProtectedRegion r : temp) pm.callEvent(new PlayerLeaveAreaEvent(p, r));
 			players_in_regions.put(p.getName(), sl);
 			
-			for (ProtectedRegion r : sl) pm.callEvent(new PlayerInWGRegionEvent(p, r));
+			for (ProtectedRegion r : sl) pm.callEvent(new PlayerInAreaEvent(p, r));
 		}
 	}
 	

@@ -5,19 +5,17 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-
-public class PlayerEnterWGRegionEvent extends Event implements Cancellable
+public class PlayerInAreaEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
 	private final Player player;
-	private final ProtectedRegion region;
+	private final Object area;
 	
-	public PlayerEnterWGRegionEvent(Player p, ProtectedRegion r)
+	public PlayerInAreaEvent(Player p, Object area)
 	{
 		player = p;
-		region = r;
+		this.area = area;
 	}
 	
 	public Player getPlayer()
@@ -25,9 +23,9 @@ public class PlayerEnterWGRegionEvent extends Event implements Cancellable
 		return player;
 	}
 	
-	public ProtectedRegion getRegion()
+	public Object getArea()
 	{
-		return region;
+		return area;
 	}
 	
 	@Override
