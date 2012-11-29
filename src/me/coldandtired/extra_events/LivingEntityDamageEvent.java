@@ -1,6 +1,7 @@
 package me.coldandtired.extra_events;
 
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -12,13 +13,15 @@ public class LivingEntityDamageEvent extends Event implements Cancellable
 	private boolean cancelled = false;
 	private final LivingEntity entity;
 	private final LivingEntity attacker;
+	private final Projectile projectile;
 	private DamageCause cause;
 	private int damage;
 	
-	public LivingEntityDamageEvent(LivingEntity le, LivingEntity a, DamageCause c, int d)
+	public LivingEntityDamageEvent(LivingEntity le, LivingEntity a, Projectile p, DamageCause c, int d)
 	{
 		entity = le;
 		attacker = a;
+		projectile = p;
 		cause = c;
 		damage = d;
 	}
@@ -31,6 +34,11 @@ public class LivingEntityDamageEvent extends Event implements Cancellable
 	public LivingEntity getAttacker()
 	{
 		return attacker;
+	}
+	
+	public Projectile getProjectile()
+	{
+		return projectile;
 	}
 	
 	public DamageCause getCause()

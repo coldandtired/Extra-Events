@@ -14,6 +14,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -137,7 +138,6 @@ public class Extra_events extends JavaPlugin implements Listener
 		ProtectedRegion pr = wgp.getRegionManager(Bukkit.getWorld(names[0])).getRegion(names[1]);
 		if (pr == null) return null;
 
-		getLogger().info("b");
 		BlockVector min = pr.getMinimumPoint();
 		BlockVector max = pr.getMaximumPoint();
 		return new Area(names[0], names[1],
@@ -246,25 +246,33 @@ public class Extra_events extends JavaPlugin implements Listener
 	public void hit(EntityDamageEvent event)
 	{
 		if (!(event.getEntity() instanceof LivingEntity)) return;
-		LivingEntity le = (LivingEntity)event.getEntity();
-				
+		LivingEntity le = (LivingEntity)event.getEntity();				
+		
+		
 		LivingEntity attacker = null;
+		Projectile p = null;
 		if (event instanceof EntityDamageByEntityEvent)
 		{
 			Entity e = ((EntityDamageByEntityEvent)event).getDamager();
-			if (e instanceof LivingEntity) attacker = (LivingEntity)e;
+			if (e instanceof Projectile)
+			{
+				p = (Projectile)e;
+				attacker = p.getShooter();
+				pm.callEvent(new LivingEntityHitByProjectileEvent(le, attacker, p));
+			}
+			else if (e instanceof LivingEntity) attacker = (LivingEntity)e;
 		}
 		
 		if (le.getNoDamageTicks() > 10)
 		{
 			// no damage
 			event.setCancelled(true);
-			pm.callEvent(new LivingEntityBlockEvent(le, attacker, event.getCause()));
+			pm.callEvent(new LivingEntityBlockEvent(le, attacker, p, event.getCause()));
 		}	
 		else
 		{
 			// damaged
-			LivingEntityDamageEvent lede = new LivingEntityDamageEvent(le, attacker, event.getCause(), event.getDamage());
+			LivingEntityDamageEvent lede = new LivingEntityDamageEvent(le, attacker, p, event.getCause(), event.getDamage());
 			pm.callEvent(lede);
 			event.setDamage(lede.getDamage());
 			event.setCancelled(lede.isCancelled());
