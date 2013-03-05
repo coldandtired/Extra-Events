@@ -1,7 +1,7 @@
 name: Extra Events
-version: 1.4.5 b3
+version: 1.4.7 b1
 author: coldandtired
-main: me.coldandtired.extra_events.Extra_events
+main: me.coldandtired.extra_events.ExtraEvents
 description: Adds a few events not found in Bukkit
 website: coldandtired.binhoster.com
 softdepend: [WorldGuard]

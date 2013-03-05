@@ -20,6 +20,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -28,7 +29,7 @@ import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
-public class Extra_events extends JavaPlugin implements Listener
+public class ExtraEvents extends JavaPlugin implements Listener
 {
 	private Map<String, Set<Entity>> approached_players = new HashMap<String, Set<Entity>>();
 	private Map<String, Set<Entity>> leaving_players = new HashMap<String, Set<Entity>>();
@@ -148,7 +149,7 @@ public class Extra_events extends JavaPlugin implements Listener
 	
 	private void timerTick()
 	{
-		checkNearby_Players();
+		checkNearbyPlayers();
 		if (wgp != null) checkRegions();
 		checkAreas();
 		checkTime();
@@ -198,7 +199,7 @@ public class Extra_events extends JavaPlugin implements Listener
 		}
 	}
 	
- 	private void checkNearby_Players()
+ 	private void checkNearbyPlayers()
 	{
 		for (Player p : Bukkit.getOnlinePlayers())
 		{
@@ -242,12 +243,11 @@ public class Extra_events extends JavaPlugin implements Listener
 		else if (l > 18000 && l <= 18019) pm.callEvent(new MidnightEvent());
 	}
  	
- 	@EventHandler (priority = EventPriority.LOWEST)
+ 	@EventHandler (priority = EventPriority.HIGHEST)
 	public void hit(EntityDamageEvent event)
 	{
 		if (!(event.getEntity() instanceof LivingEntity)) return;
-		LivingEntity le = (LivingEntity)event.getEntity();				
-		
+		LivingEntity le = (LivingEntity)event.getEntity();			
 		
 		LivingEntity attacker = null;
 		Projectile p = null;
@@ -266,7 +266,8 @@ public class Extra_events extends JavaPlugin implements Listener
 		if (le.getNoDamageTicks() > 10)
 		{
 			// no damage
-			event.setCancelled(true);
+			//event.setCancelled(true);
+			event.setDamage(0);
 			pm.callEvent(new LivingEntityBlockEvent(le, attacker, p, event.getCause()));
 		}	
 		else
@@ -277,5 +278,13 @@ public class Extra_events extends JavaPlugin implements Listener
 			event.setDamage(lede.getDamage());
 			event.setCancelled(lede.isCancelled());
 		}
+	}
+
+ 	@EventHandler
+	public void targets(EntityTargetLivingEntityEvent event)
+	{
+ 		if (!(event.getEntity() instanceof LivingEntity)) return;
+ 		
+ 		if (event.getTarget() instanceof Player) pm.callEvent(new PlayerTargetedEvent((Player)event.getTarget(), (LivingEntity)event.getEntity(), event.getReason()));
 	}
 }
