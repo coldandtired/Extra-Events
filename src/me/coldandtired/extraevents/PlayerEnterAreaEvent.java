@@ -1,4 +1,4 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;

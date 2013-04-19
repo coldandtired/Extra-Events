@@ -1,4 +1,4 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +10,8 @@ import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -31,11 +33,12 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class ExtraEvents extends JavaPlugin implements Listener
 {
-	private Map<String, Set<Entity>> approached_players = new HashMap<String, Set<Entity>>();
-	private Map<String, Set<Entity>> leaving_players = new HashMap<String, Set<Entity>>();
+	private Map<String, Set<Entity>> approached_players;
+	private Map<String, Set<Entity>> leaving_players;
 	private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
 	private Map<String, Set<Area>> players_in_areas = new HashMap<String, Set<Area>>();
 	private PluginManager pm;
+	private Map<String, Timer> timers;
 	private int approach_x;
 	private int approach_y;
 	private int approach_z;
@@ -47,14 +50,34 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	private int near_z;
 	private boolean tick = true;
 	private WorldGuardPlugin wgp = null;
-	private Map<String, Area> areas = new HashMap<String, Area>();	
+	private Map<String, Area> areas;
+	private boolean disabled_timer = false;	
 	
 	@Override
 	public void onEnable()
 	{
+		loadConfig();	
+		pm = getServer().getPluginManager();
+		pm.registerEvents(this, this);
+		
+		Plugin p = pm.getPlugin("WorldGuard");
+		if (p != null && p instanceof WorldGuardPlugin) wgp = (WorldGuardPlugin)p;
+		
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() 
+		{			 
+			public void run() {timerTick();}
+		}, 10, 10);
+	}
+	
+ 	private void loadConfig()
+	{
 		FileConfiguration config = getConfig();
 		config.options().copyDefaults(true);
 		saveConfig();
+		
+		areas = new HashMap<String, Area>();
+		approached_players = new HashMap<String, Set<Entity>>();
+		leaving_players = new HashMap<String, Set<Entity>>();
 		
 		for (String world_name : config.getConfigurationSection("areas").getKeys(false))
 		{
@@ -85,16 +108,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		leave_x = config.getInt("leave.x");
 		leave_y = config.getInt("leave.y");
 		leave_z = config.getInt("leave.z");
-		pm = getServer().getPluginManager();
-		pm.registerEvents(this, this);
-		
-		Plugin p = pm.getPlugin("WorldGuard");
-		if (p != null && p instanceof WorldGuardPlugin) wgp = (WorldGuardPlugin)p;
-		
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() 
-		{			 
-			public void run() {timerTick();}
-		}, 10, 10);
+		fillTimers();
 	}
 	
 	@Override
@@ -129,8 +143,38 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		return temp;
 	}
 	
+	private void fillTimers()
+	{
+		timers = null;
+		
+		FileConfiguration config = getConfig();
+		if (config.contains("timers"))
+		{
+			timers = new HashMap<String, Timer>();
+			for (String s : config.getConfigurationSection("timers").getKeys(false))
+			{
+				String w = config.getString("timers." + s + ".world");
+				if (w == null)
+				{
+					getLogger().warning("The timer called " + s + " is missing the world value!");
+					continue;
+				}
+				
+				if (Bukkit.getWorld(w) == null)
+				{
+					getLogger().warning("The timer called " + s + " has an unknown world!");
+					continue;
+				}
+				
+				int interval = config.getInt("timers." + s + ".interval_in_seconds", 300);
+				timers.put(s, new Timer(s, interval, w));
+			}
+		}
+	}
+	
 	public Area getArea(String name)
 	{
+		//if (areas == null) return null;
 		Area a = areas.get(name);
 		if (a != null) return a;
 		if (wgp == null) return null;
@@ -153,7 +197,11 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		if (wgp != null) checkRegions();
 		checkAreas();
 		checkTime();
-		if (tick) pm.callEvent(new SecondTickEvent());
+		if (tick)
+		{
+			pm.callEvent(new SecondTickEvent());
+			checkTimers();
+		}
 		tick = !tick;
 	}
 	
@@ -243,6 +291,13 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		else if (l > 18000 && l <= 18019) pm.callEvent(new MidnightEvent());
 	}
  	
+ 	private void checkTimers()
+ 	{
+ 		if (timers == null || disabled_timer) return;
+ 	
+ 		for (Timer t : timers.values()) t.tick();
+ 	}
+ 	
  	@EventHandler (priority = EventPriority.HIGHEST)
 	public void hit(EntityDamageEvent event)
 	{
@@ -286,5 +341,148 @@ public class ExtraEvents extends JavaPlugin implements Listener
  		if (!(event.getEntity() instanceof LivingEntity)) return;
  		
  		if (event.getTarget() instanceof Player) pm.callEvent(new PlayerTargetedEvent((Player)event.getTarget(), (LivingEntity)event.getEntity(), event.getReason()));
+	}
+
+ 	@Override
+	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args)
+	{
+ 		if (cmd.getName().equalsIgnoreCase("reload_extraevents"))
+		{			
+			loadConfig();
+			sender.sendMessage("Config reloaded!");
+			return true;
+		}
+ 		else if (cmd.getName().equalsIgnoreCase("timers"))
+		{
+			if (args.length == 0)
+			{
+				sender.sendMessage("Timers are " + (disabled_timer ? "paused" : "running"));
+				return true;
+			}
+			if (timers == null)
+			{
+				sender.sendMessage("There are no timers set!");
+				sender.sendMessage("Timers are " + (disabled_timer ? "paused" : "running"));
+				return true;
+			}
+			
+			if (args[0].equalsIgnoreCase("enable"))
+			{
+				if (args.length == 1)
+				{
+					for (Timer t : timers.values())
+					{
+						t.setEnabled(true);
+					}
+					sender.sendMessage("Enabled all timers!");
+					return true;
+				}
+				else if (args.length == 2)
+				{
+					timers.get(args[1]).setEnabled(true);
+					sender.sendMessage("Enabled timer " + args[1] + "!");
+					return true;
+				}
+			}
+			else if (args[0].equalsIgnoreCase("disable"))
+			{
+				if (args.length == 1)
+				{
+					for (Timer t : timers.values())
+					{
+						t.setEnabled(false);
+					}
+					sender.sendMessage("Disabled all timers!");
+					return true;
+				}
+				else if (args.length == 2)
+				{
+					timers.get(args[1]).setEnabled(false);
+					sender.sendMessage("Disabled timer " + args[1] + "!");
+					return true;
+				}
+			}
+			if (args[0].equalsIgnoreCase("activate"))
+			{
+				if (args.length == 1)
+				{					
+					sender.sendMessage("Activating all timers!");
+					for (Timer t : timers.values())
+					{
+						t.activate();
+					}
+					return true;
+				}
+				else if (args.length == 2)
+				{
+					sender.sendMessage("Activating timer " + args[1] + "!");
+					timers.get(args[1]).activate();
+					return true;
+				}
+			}
+			else if (args[0].equalsIgnoreCase("unpause"))
+			{
+				if (args.length == 1)
+				{
+					disabled_timer = false;
+					sender.sendMessage("Timers are now running!");
+					return true;
+				}
+				return false;
+			}
+			else if (args[0].equalsIgnoreCase("pause"))
+			{
+				if (args.length == 1)
+				{
+					disabled_timer = true;
+					sender.sendMessage("Timers are now paused!");
+					return true;
+				}
+				return false;
+			}
+			else if (args[0].equalsIgnoreCase("check"))
+			{
+				if (args.length == 1)
+				{
+					for (Timer t : timers.values())
+					{
+						sender.sendMessage(t.check());
+					}
+					sender.sendMessage("Timers are " + (disabled_timer ? "paused" : "running"));
+					return true;
+				}
+				else if (args.length == 2)
+				{
+					Timer t = timers.get(args[1]);
+					
+					sender.sendMessage(t.check());
+					sender.sendMessage("Timers are " + (disabled_timer ? "paused" : "running"));
+					return true;
+				}
+			}
+			else if (args[0].equalsIgnoreCase("set_interval"))
+			{
+				if (args.length == 1) return false;
+				int i = Integer.parseInt(args[1]);
+				if (args.length == 2)
+				{
+					for (Timer t : timers.values())
+					{
+						t.setInterval(i);
+					}
+					sender.sendMessage("All timer intervals set to " + i + "!");
+					return true;
+				}
+				else if (args.length == 3)
+				{
+					Timer t = timers.get(args[2]);
+					t.setInterval(i);
+					sender.sendMessage("Timer " + t.getName() + " interval set to " + i + "!");
+					return true;
+				}
+			}
+			return false;
+		}
+ 		return false;
 	}
 }

@@ -1,4 +1,4 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Projectile;

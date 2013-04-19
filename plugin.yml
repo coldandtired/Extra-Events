@@ -1,7 +1,25 @@
 name: Extra Events
-version: 1.4.7 b1
+version: 1.4.7 b2
 author: coldandtired
-main: me.coldandtired.extra_events.ExtraEvents
-description: Adds a few events not found in Bukkit
+main: me.coldandtired.extraevents.ExtraEvents
+description: Adds a few events not found in Bukkit, along with repeating timers
 website: coldandtired.binhoster.com
 softdepend: [WorldGuard]
+commands:
+    reload_extraevents:
+        description: Reload the config without reloading the plugin itself
+        aliases: ree
+        usage: "Usage: /reload_extraevents"
+        permission: extraevents.can_reload_config  
+    timers:
+        description: Adjust timers
+        aliases: t
+        usage: "Usage: /timers [enable|disable|pause|unpause|check|set_interval|activate] [seconds] [name]"
+        permission: extraevents.can_change_timers
+permissions:
+    extraevents.can_reload_config:
+        description: Allows a user to reload the config
+        default: op
+    extraevents.can_change_timers:
+        description: Allows a user to change the timers (enable, disable, change interval, etc.)
+        default: op

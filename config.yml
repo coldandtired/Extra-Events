@@ -22,3 +22,8 @@ areas:
       z:
         from: 100
         to: 120
+timers:
+  example:
+    interval_in_seconds: 300
+    enabled: no
+    world: world_name

@@ -1,4 +1,4 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
 import java.util.Random;
 

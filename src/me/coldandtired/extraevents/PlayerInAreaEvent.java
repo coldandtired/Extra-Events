@@ -1,23 +1,31 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class HourChangeEvent extends Event implements Cancellable
+public class PlayerInAreaEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	private final int hour;
+	private final Player player;
+	private final Object area;
 	
-	public HourChangeEvent(int hour)
+	public PlayerInAreaEvent(Player p, Object area)
 	{
-		this.hour = hour;
+		player = p;
+		this.area = area;
 	}
 	
-	public int getHour()
+	public Player getPlayer()
 	{
-		return hour;
+		return player;
+	}
+	
+	public Object getArea()
+	{
+		return area;
 	}
 	
 	@Override

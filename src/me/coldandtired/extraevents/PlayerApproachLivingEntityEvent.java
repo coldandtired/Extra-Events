@@ -1,13 +1,33 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class MiddayEvent extends Event implements Cancellable
+public class PlayerApproachLivingEntityEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
+	private final LivingEntity entity;
+	private final Player player;
+	
+	public PlayerApproachLivingEntityEvent(LivingEntity e, Player p)
+	{
+		entity = e;
+		player = p;
+	}
+	
+	public LivingEntity getEntity()
+	{
+		return entity;
+	}
+	
+	public Player getPlayer()
+	{
+		return player;
+	}
 	
 	@Override
 	public boolean isCancelled() 

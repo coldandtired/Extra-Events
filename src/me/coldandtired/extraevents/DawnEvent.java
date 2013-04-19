@@ -1,14 +1,14 @@
-package me.coldandtired.extra_events;
+package me.coldandtired.extraevents;
 
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class SecondTickEvent extends Event implements Cancellable
+public class DawnEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	
+
 	@Override
 	public boolean isCancelled() 
 	{
