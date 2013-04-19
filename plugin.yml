@@ -1,5 +1,5 @@
 name: Extra Events
-version: 1.4.7 b2
+version: 1.5.1 b1
 author: coldandtired
 main: me.coldandtired.extraevents.ExtraEvents
 description: Adds a few events not found in Bukkit, along with repeating timers

@@ -298,7 +298,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
  		for (Timer t : timers.values()) t.tick();
  	}
  	
- 	@EventHandler (priority = EventPriority.HIGHEST)
+ 	@EventHandler (priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void hit(EntityDamageEvent event)
 	{
 		if (!(event.getEntity() instanceof LivingEntity)) return;
@@ -318,10 +318,9 @@ public class ExtraEvents extends JavaPlugin implements Listener
 			else if (e instanceof LivingEntity) attacker = (LivingEntity)e;
 		}
 		
-		if (le.getNoDamageTicks() > 10)
+		if (le.getNoDamageTicks() > le.getMaximumNoDamageTicks()/2F)
 		{
 			// no damage
-			//event.setCancelled(true);
 			event.setDamage(0);
 			pm.callEvent(new LivingEntityBlockEvent(le, attacker, p, event.getCause()));
 		}	
