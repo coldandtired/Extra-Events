@@ -1,14 +1,12 @@
 package me.coldandtired.extraevents;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -35,7 +33,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 {
 	private Map<String, Set<Entity>> approached_players;
 	private Map<String, Set<Entity>> leaving_players;
-	private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
+	//private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
 	private Map<String, Set<Area>> players_in_areas = new HashMap<String, Set<Area>>();
 	private PluginManager pm;
 	private Map<String, Timer> timers;
@@ -48,7 +46,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	private int near_x;
 	private int near_y;
 	private int near_z;
-	private boolean tick = true;
+	//private boolean tick = true;
 	private WorldGuardPlugin wgp = null;
 	private Map<String, Area> areas;
 	private boolean disabled_timer = false;	
@@ -66,7 +64,8 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() 
 		{			 
 			public void run() {timerTick();}
-		}, 10, 10);
+		}, 20, 20);
+		//}, 10, 10);
 	}
 	
  	private void loadConfig()
@@ -79,23 +78,26 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		approached_players = new HashMap<String, Set<Entity>>();
 		leaving_players = new HashMap<String, Set<Entity>>();
 		
-		for (String world_name : config.getConfigurationSection("areas").getKeys(false))
+		if (config.contains("areas"))
 		{
-			for (String area_name : config.getConfigurationSection("areas." + world_name).getKeys(false))
+			for (String world_name : config.getConfigurationSection("areas").getKeys(false))
 			{
-				String key = world_name + "." + area_name;
-				Area area = new Area
-						(
-							world_name,
-							area_name,
-							config.getInt("areas." + key + ".x.from"),
-							config.getInt("areas." + key + ".x.to"),
-							config.getInt("areas." + key + ".y.from"),
-							config.getInt("areas." + key + ".y.to"),
-							config.getInt("areas." + key + ".z.from"),
-							config.getInt("areas." + key + ".z.to")
-						);
-				areas.put(world_name + ":" + area_name, area);
+				for (String area_name : config.getConfigurationSection("areas." + world_name).getKeys(false))
+				{
+					String key = world_name + "." + area_name;
+					Area area = new Area
+							(
+								world_name,
+								area_name,
+								config.getInt("areas." + key + ".x.from"),
+								config.getInt("areas." + key + ".x.to"),
+								config.getInt("areas." + key + ".y.from"),
+								config.getInt("areas." + key + ".y.to"),
+								config.getInt("areas." + key + ".z.from"),
+								config.getInt("areas." + key + ".z.to")
+							);
+					areas.put(world_name + ":" + area_name, area);
+				}
 			}
 		}
 		
@@ -108,6 +110,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		leave_x = config.getInt("leave.x");
 		leave_y = config.getInt("leave.y");
 		leave_z = config.getInt("leave.z");
+		importAreas();
 		fillTimers();
 	}
 	
@@ -120,9 +123,10 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		pm = null;
 	}
 		
-	public List<Area> getAreas()
+	public Collection<Area> getAreas()
 	{
-		List<Area> temp = new ArrayList<Area>(areas.values());
+		return areas.values();
+		/*List<Area> temp = new ArrayList<Area>(areas.values());
 		if (wgp != null)
 		{
 			for (World w : Bukkit.getWorlds())
@@ -140,7 +144,26 @@ public class ExtraEvents extends JavaPlugin implements Listener
 			}
 		}
 		
-		return temp;
+		return temp;*/
+	}
+	
+	private void importAreas()
+	{
+		if (wgp == null) return;
+		
+		for (World w : Bukkit.getWorlds())
+		{
+			for (String s : wgp.getRegionManager(w).getRegions().keySet())
+			{
+				ProtectedRegion pr = wgp.getRegionManager(w).getRegion(s);
+				BlockVector min = pr.getMinimumPoint();
+				BlockVector max = pr.getMaximumPoint();
+				areas.put(w.getName() + ":" + s, new Area(w.getName(), s,
+						min.getBlockX(), max.getBlockX(),
+						min.getBlockY(), max.getBlockY(),
+						min.getBlockZ(), max.getBlockZ()));
+			}
+		}
 	}
 	
 	private void fillTimers()
@@ -194,20 +217,20 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	private void timerTick()
 	{
 		checkNearbyPlayers();
-		if (wgp != null) checkRegions();
+		//if (wgp != null) checkRegions();
 		checkAreas();
 		checkTime();
-		if (tick)
-		{
+		//if (tick)
+		//{
 			pm.callEvent(new SecondTickEvent());
 			checkTimers();
-		}
-		tick = !tick;
+		//}
+		//tick = !tick;
 	}
 	
 	private void checkAreas()
 	{
-		for (Player p : Bukkit.getOnlinePlayers())
+		/*for (Player p : Bukkit.getOnlinePlayers())
 		{
 			Set<Area> temp = players_in_areas.containsKey(p.getName()) ? players_in_areas.get(p.getName()) : new HashSet<Area>();
 			Set<Area> sl = new HashSet<Area>();
@@ -223,12 +246,46 @@ public class ExtraEvents extends JavaPlugin implements Listener
 			players_in_areas.put(p.getName(), sl);
 			
 			for (Area a : sl) pm.callEvent(new PlayerInAreaEvent(p, a));
+		}*/
+		importAreas();
+		for (World w : Bukkit.getWorlds())
+		{
+			for (LivingEntity le : w.getEntitiesByClass(LivingEntity.class))
+			{
+				String s = le.getUniqueId().toString();
+				Set<Area> temp = players_in_areas.containsKey(s) ? players_in_areas.get(s) : new HashSet<Area>();
+				Set<Area> sl = new HashSet<Area>();
+				
+				for (Area a : areas.values())
+				{
+					if (!a.isIn_area(le.getLocation())) continue;
+					if (!temp.contains(a))
+					{
+						if (le instanceof Player) pm.callEvent(new PlayerEnterAreaEvent((Player)le, a));
+						else pm.callEvent(new LivingEntityEnterAreaEvent(le, a));
+					}
+					sl.add(a);
+				}
+				temp.removeAll(sl);
+				for (Area a : temp)
+				{
+					if (le instanceof Player) pm.callEvent(new PlayerLeaveAreaEvent((Player)le, a));
+					else pm.callEvent(new LivingEntityLeaveAreaEvent(le, a));
+				}
+				players_in_areas.put(s, sl);
+				
+				for (Area a : sl)
+				{
+					if (le instanceof Player) pm.callEvent(new PlayerInAreaEvent((Player)le, a));
+					else pm.callEvent(new LivingEntityInAreaEvent(le, a));
+				}
+			}
 		}
 	}
 	
-	private void checkRegions()
+	/*private void checkRegions()
 	{
-		for (Player p : Bukkit.getOnlinePlayers())
+		/*for (Player p : Bukkit.getOnlinePlayers())
 		{
 			Set<ProtectedRegion> temp = players_in_regions.containsKey(p.getName()) ? players_in_regions.get(p.getName()) : new HashSet<ProtectedRegion>();
 			Set<ProtectedRegion> sl = new HashSet<ProtectedRegion>();
@@ -245,7 +302,41 @@ public class ExtraEvents extends JavaPlugin implements Listener
 			
 			for (ProtectedRegion r : sl) pm.callEvent(new PlayerInAreaEvent(p, r));
 		}
-	}
+		
+		for (World w : Bukkit.getWorlds())
+		{
+			for (LivingEntity le : w.getEntitiesByClass(LivingEntity.class))
+			{
+				String s = le.getUniqueId().toString();
+				Set<ProtectedRegion> temp = players_in_regions.containsKey(s) ? players_in_regions.get(s) : new HashSet<ProtectedRegion>();
+				Set<ProtectedRegion> sl = new HashSet<ProtectedRegion>();
+				Location loc = le.getLocation();
+				for (ProtectedRegion r : wgp.getRegionManager(w).getRegions().values())
+				{
+					if (!r.contains(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) continue;
+					if (!temp.contains(r)) 
+					{
+						if (le instanceof Player) pm.callEvent(new PlayerEnterAreaEvent((Player)le, r));
+						else pm.callEvent(new LivingEntityEnterAreaEvent(le, r));
+					}
+					sl.add(r);
+				}
+				temp.removeAll(sl);
+				for (ProtectedRegion r : temp)
+				{
+					if (le instanceof Player) pm.callEvent(new PlayerLeaveAreaEvent((Player)le, r));
+					else pm.callEvent(new LivingEntityLeaveAreaEvent(le, r));
+				}
+				players_in_regions.put(s, sl);
+				
+				for (ProtectedRegion r : sl)
+				{
+					if (le instanceof Player) pm.callEvent(new PlayerInAreaEvent((Player)le, r));
+					else pm.callEvent(new LivingEntityInAreaEvent(le, r));
+				}
+			}
+		}
+	}*/
 	
  	private void checkNearbyPlayers()
 	{
@@ -280,7 +371,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
  	
  	private void checkTime()
 	{
- 		if (!tick) return;
+ 		//if (!tick) return;
  		long l = Bukkit.getWorlds().get(0).getTime();
  		long i = l % 1000;
  		if (i > 0 && i <= 19) pm.callEvent(new HourChangeEvent((int)(l / 1000)));
