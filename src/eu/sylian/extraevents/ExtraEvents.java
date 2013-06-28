@@ -1,10 +1,18 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -21,9 +29,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
@@ -34,7 +45,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	private Map<String, Set<Entity>> approached_players;
 	private Map<String, Set<Entity>> leaving_players;
 	//private Map<String, Set<ProtectedRegion>> players_in_regions = new HashMap<String, Set<ProtectedRegion>>();
-	private Map<String, Set<Area>> players_in_areas = new HashMap<String, Set<Area>>();
+	//private Map<String, Set<Area>> players_in_areas = new HashMap<String, Set<Area>>();
 	private PluginManager pm;
 	private Map<String, Timer> timers;
 	private int approach_x;
@@ -54,25 +65,47 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	@Override
 	public void onEnable()
 	{
+		getConfig().options().copyDefaults(true);
+		saveConfig();
 		loadConfig();	
+		checkVersion();
 		pm = getServer().getPluginManager();
 		pm.registerEvents(this, this);
 		
 		Plugin p = pm.getPlugin("WorldGuard");
 		if (p != null && p instanceof WorldGuardPlugin) wgp = (WorldGuardPlugin)p;
+		importRegions();
 		
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() 
 		{			 
 			public void run() {timerTick();}
 		}, 20, 20);
 		//}, 10, 10);
+		
+	}
+	
+	/** Checks if the running version is the newest available (works with release versions only) */
+	private void checkVersion()
+	{
+		if (!getConfig().getBoolean("check_for_newer_version", true)) return;
+		
+		XPath xpath = XPathFactory.newInstance().newXPath();
+		
+		DocumentBuilder dbf;
+		try 
+		{
+			dbf = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			Document doc = dbf.parse("http://dev.bukkit.org/server-mods/extra-events/files.rss");
+			String s = ((Element) xpath.evaluate("//item[1]/title", doc, XPathConstants.NODE)).getTextContent();
+			if (!s.equalsIgnoreCase(getDescription().getVersion())) getLogger().info("There's a more recent version available!");
+		} 
+		catch (Exception e) {}		
 	}
 	
  	private void loadConfig()
 	{
+ 		reloadConfig();
 		FileConfiguration config = getConfig();
-		config.options().copyDefaults(true);
-		saveConfig();
 		
 		areas = new HashMap<String, Area>();
 		approached_players = new HashMap<String, Set<Entity>>();
@@ -82,6 +115,12 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		{
 			for (String world_name : config.getConfigurationSection("areas").getKeys(false))
 			{
+				if (Bukkit.getWorld(world_name) == null)
+				{
+					Bukkit.getLogger().warning("No world called " + world_name + " found!");
+					continue;
+				}
+				
 				for (String area_name : config.getConfigurationSection("areas." + world_name).getKeys(false))
 				{
 					String key = world_name + "." + area_name;
@@ -110,7 +149,6 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		leave_x = config.getInt("leave.x");
 		leave_y = config.getInt("leave.y");
 		leave_z = config.getInt("leave.z");
-		importAreas();
 		fillTimers();
 	}
 	
@@ -147,7 +185,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		return temp;*/
 	}
 	
-	private void importAreas()
+	private void importRegions()
 	{
 		if (wgp == null) return;
 		
@@ -155,13 +193,22 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		{
 			for (String s : wgp.getRegionManager(w).getRegions().keySet())
 			{
+
 				ProtectedRegion pr = wgp.getRegionManager(w).getRegion(s);
 				BlockVector min = pr.getMinimumPoint();
 				BlockVector max = pr.getMaximumPoint();
-				areas.put(w.getName() + ":" + s, new Area(w.getName(), s,
+				Area a = areas.get(w.getName() + ":" + s);
+				if (a != null)
+				{
+					a.updateArea(min.getBlockX(), max.getBlockX(),
+							min.getBlockY(), max.getBlockY(),
+							min.getBlockZ(), max.getBlockZ());
+				}
+				else a = new Area(w.getName(), s,
 						min.getBlockX(), max.getBlockX(),
 						min.getBlockY(), max.getBlockY(),
-						min.getBlockZ(), max.getBlockZ()));
+						min.getBlockZ(), max.getBlockZ());
+				areas.put(w.getName() + ":" + s, a);
 			}
 		}
 	}
@@ -247,8 +294,9 @@ public class ExtraEvents extends JavaPlugin implements Listener
 			
 			for (Area a : sl) pm.callEvent(new PlayerInAreaEvent(p, a));
 		}*/
-		importAreas();
-		for (World w : Bukkit.getWorlds())
+		importRegions();
+		for (Area a : areas.values()) a.fillMobs();
+		/*for (World w : Bukkit.getWorlds())
 		{
 			for (LivingEntity le : w.getEntitiesByClass(LivingEntity.class))
 			{
@@ -258,7 +306,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 				
 				for (Area a : areas.values())
 				{
-					if (!a.isIn_area(le.getLocation())) continue;
+					if (!a.isInArea(le.getLocation())) continue;
 					if (!temp.contains(a))
 					{
 						if (le instanceof Player) pm.callEvent(new PlayerEnterAreaEvent((Player)le, a));
@@ -280,7 +328,7 @@ public class ExtraEvents extends JavaPlugin implements Listener
 					else pm.callEvent(new LivingEntityInAreaEvent(le, a));
 				}
 			}
-		}
+		}*/
 	}
 	
 	/*private void checkRegions()
@@ -425,6 +473,28 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		}
 	}
 
+ 	@EventHandler
+	public void commandEntered(PlayerCommandPreprocessEvent event)
+	{
+		String s = event.getMessage();
+		while (s.startsWith("/")) s = s.replaceFirst("/", "");
+		
+		if (s.equalsIgnoreCase(event.getMessage())) return;
+		
+		List<String> temp = Arrays.asList(s.trim().split(" "));
+		
+		switch (temp.size())
+		{
+			case 0: return;
+			case 1:
+				pm.callEvent(new PlayerCommandEvent(event.getPlayer(), temp.get(0), null));
+				break;
+			default:
+				pm.callEvent(new PlayerCommandEvent(event.getPlayer(), temp.get(0), temp.subList(1, temp.size())));
+				break;		
+		}
+	}
+ 	
  	@EventHandler
 	public void targets(EntityTargetLivingEntityEvent event)
 	{

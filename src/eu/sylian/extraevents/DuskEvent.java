@@ -1,33 +1,14 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
-import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class PlayerLeaveAreaEvent extends Event implements Cancellable
+public class DuskEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	private final Player player;
-	private final Object area;
-	
-	public PlayerLeaveAreaEvent(Player p, Object area)
-	{
-		player = p;
-		this.area = area;
-	}
-	
-	public Player getPlayer()
-	{
-		return player;
-	}
-	
-	public Object getArea()
-	{
-		return area;
-	}
-	
+
 	@Override
 	public boolean isCancelled() 
 	{

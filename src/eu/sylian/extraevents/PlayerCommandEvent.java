@@ -1,32 +1,40 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
-import org.bukkit.entity.LivingEntity;
+import java.util.List;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class PlayerApproachLivingEntityEvent extends Event implements Cancellable
+public class PlayerCommandEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	private final LivingEntity entity;
 	private final Player player;
+	private final String command;
+	private final List<String> args;
 	
-	public PlayerApproachLivingEntityEvent(LivingEntity e, Player p)
+	public PlayerCommandEvent(Player p, String command, List<String> args)
 	{
-		entity = e;
 		player = p;
-	}
-	
-	public LivingEntity getEntity()
-	{
-		return entity;
+		this.command = command;
+		this.args = args;
 	}
 	
 	public Player getPlayer()
 	{
 		return player;
+	}
+	
+	public String getCommand()
+	{
+		return command;
+	}
+	
+	public List<String> getArgs()
+	{
+		return args;
 	}
 	
 	@Override

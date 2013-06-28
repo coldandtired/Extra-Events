@@ -1,22 +1,24 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class PlayerLeaveLivingEntityEvent extends Event implements Cancellable
+public class LivingEntityHitByProjectileEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
 	private final LivingEntity entity;
-	private final Player player;
+	private final LivingEntity attacker;
+	private final Projectile projectile;
 	
-	public PlayerLeaveLivingEntityEvent(LivingEntity e, Player p)
+	public LivingEntityHitByProjectileEvent(LivingEntity e, LivingEntity a, Projectile p)
 	{
 		entity = e;
-		player = p;
+		attacker = a;
+		projectile = p;
 	}
 	
 	public LivingEntity getEntity()
@@ -24,9 +26,14 @@ public class PlayerLeaveLivingEntityEvent extends Event implements Cancellable
 		return entity;
 	}
 	
-	public Player getPlayer()
+	public LivingEntity getAttacker()
 	{
-		return player;
+		return attacker;
+	}
+	
+	public Projectile getProjectile()
+	{
+		return projectile;
 	}
 	
 	@Override

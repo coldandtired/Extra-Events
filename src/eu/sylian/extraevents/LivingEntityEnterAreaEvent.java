@@ -1,14 +1,33 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class DuskEvent extends Event implements Cancellable
+public class LivingEntityEnterAreaEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-
+	private final LivingEntity le;
+	private final Object area;
+	
+	public LivingEntityEnterAreaEvent(LivingEntity le, Object area)
+	{
+		this.le = le;
+		this.area = area;
+	}
+	
+	public LivingEntity getLivingEntity()
+	{
+		return le;
+	}
+	
+	public Object getArea()
+	{
+		return area;
+	}
+	
 	@Override
 	public boolean isCancelled() 
 	{

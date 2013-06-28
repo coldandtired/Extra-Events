@@ -1,13 +1,24 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class MiddayEvent extends Event implements Cancellable
+public class HourChangeEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
+	private final int hour;
+	
+	public HourChangeEvent(int hour)
+	{
+		this.hour = hour;
+	}
+	
+	public int getHour()
+	{
+		return hour;
+	}
 	
 	@Override
 	public boolean isCancelled() 

@@ -1,4 +1,4 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
 import org.bukkit.Bukkit;
 

@@ -1,31 +1,32 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class LivingEntityLeaveAreaEvent extends Event implements Cancellable
+public class PlayerLeaveLivingEntityEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
-	private final LivingEntity le;
-	private final Object area;
+	private final LivingEntity entity;
+	private final Player player;
 	
-	public LivingEntityLeaveAreaEvent(LivingEntity le, Object area)
+	public PlayerLeaveLivingEntityEvent(LivingEntity e, Player p)
 	{
-		this.le = le;
-		this.area = area;
+		entity = e;
+		player = p;
 	}
 	
-	public LivingEntity getLivingEntity()
+	public LivingEntity getEntity()
 	{
-		return le;
+		return entity;
 	}
 	
-	public Object getArea()
+	public Player getPlayer()
 	{
-		return area;
+		return player;
 	}
 	
 	@Override

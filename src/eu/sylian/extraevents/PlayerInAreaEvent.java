@@ -1,30 +1,21 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.entity.EntityTargetEvent.TargetReason;
 
-public class PlayerTargetedEvent extends Event implements Cancellable
+public class PlayerInAreaEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
 	private final Player player;
-	private final LivingEntity le;
-	private final TargetReason reason;
+	private final Object area;
 	
-	public PlayerTargetedEvent(Player player, LivingEntity le, TargetReason reason)
+	public PlayerInAreaEvent(Player p, Object area)
 	{
-		this.player = player;
-		this.le = le;
-		this.reason = reason;
-	}
-	
-	public LivingEntity getEntity()
-	{
-		return le;
+		player = p;
+		this.area = area;
 	}
 	
 	public Player getPlayer()
@@ -32,9 +23,9 @@ public class PlayerTargetedEvent extends Event implements Cancellable
 		return player;
 	}
 	
-	public TargetReason getReason()
+	public Object getArea()
 	{
-		return reason;
+		return area;
 	}
 	
 	@Override

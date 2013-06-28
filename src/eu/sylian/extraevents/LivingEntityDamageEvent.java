@@ -1,24 +1,29 @@
-package me.coldandtired.extraevents;
+package eu.sylian.extraevents;
 
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 
-public class LivingEntityHitByProjectileEvent extends Event implements Cancellable
+public class LivingEntityDamageEvent extends Event implements Cancellable
 {
 	private static final HandlerList handlers = new HandlerList();
 	private boolean cancelled = false;
 	private final LivingEntity entity;
 	private final LivingEntity attacker;
 	private final Projectile projectile;
+	private DamageCause cause;
+	private int damage;
 	
-	public LivingEntityHitByProjectileEvent(LivingEntity e, LivingEntity a, Projectile p)
+	public LivingEntityDamageEvent(LivingEntity le, LivingEntity a, Projectile p, DamageCause c, int d)
 	{
-		entity = e;
+		entity = le;
 		attacker = a;
 		projectile = p;
+		cause = c;
+		damage = d;
 	}
 	
 	public LivingEntity getEntity()
@@ -34,6 +39,26 @@ public class LivingEntityHitByProjectileEvent extends Event implements Cancellab
 	public Projectile getProjectile()
 	{
 		return projectile;
+	}
+	
+	public DamageCause getCause()
+	{
+		return cause;
+	}
+	
+	public int getDamage()
+	{
+		return damage;
+	}
+	
+	public void setCause(DamageCause cause)
+	{
+		this.cause = cause;
+	}
+	
+	public void setDamage(int damage)
+	{
+		this.damage = damage;
 	}
 	
 	@Override
