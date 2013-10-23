@@ -1,19 +1,8 @@
 package eu.sylian.extraevents;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
-
+import com.sk89q.worldedit.BlockVector;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -33,12 +22,16 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
-import com.sk89q.worldedit.BlockVector;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.*;
 
 public class ExtraEvents extends JavaPlugin implements Listener
 {
@@ -88,18 +81,23 @@ public class ExtraEvents extends JavaPlugin implements Listener
 	private void checkVersion()
 	{
 		if (!getConfig().getBoolean("check_for_newer_version", true)) return;
-		
-		XPath xpath = XPathFactory.newInstance().newXPath();
-		
-		DocumentBuilder dbf;
-		try 
-		{
-			dbf = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			Document doc = dbf.parse("http://dev.bukkit.org/server-mods/extra-events/files.rss");
-			String s = ((Element) xpath.evaluate("//item[1]/title", doc, XPathConstants.NODE)).getTextContent();
-			if (!s.equalsIgnoreCase(getDescription().getVersion())) getLogger().info("There's a more recent version available!");
-		} 
-		catch (Exception e) {}		
+
+		try (InputStream is = new URL("https://api.curseforge.com/servermods/files?projectIds=47159").openStream())
+        {
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
+            JSONArray array = (JSONArray) JSONValue.parse(rd.readLine());
+            String s;
+            if (array.size() > 0)
+            {
+                JSONObject latest = (JSONObject) array.get(array.size() - 1);
+                s = (String)latest.get("gameVersion");
+                if (!s.equalsIgnoreCase(getDescription().getVersion())) Bukkit.getLogger().info("[Extra Events] There's a more recent version available!");
+            }
+        }
+        catch (Exception e)
+        {
+            Bukkit.getLogger().warning("Error checking version :(");
+        }
 	}
 	
  	private void loadConfig()
@@ -193,7 +191,6 @@ public class ExtraEvents extends JavaPlugin implements Listener
 		{
 			for (String s : wgp.getRegionManager(w).getRegions().keySet())
 			{
-
 				ProtectedRegion pr = wgp.getRegionManager(w).getRegion(s);
 				BlockVector min = pr.getMinimumPoint();
 				BlockVector max = pr.getMaximumPoint();

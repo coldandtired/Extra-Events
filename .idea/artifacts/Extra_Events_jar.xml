@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="Extra-Events:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Extra_Events_jar</output-path>
+    <root id="archive" name="Extra-Events.jar">
+      <element id="module-output" name="Extra-Events" />
+      <element id="file-copy" path="$PROJECT_DIR$/config.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/plugin.yml" />
+    </root>
+  </artifact>
+</component>

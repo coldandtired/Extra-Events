@@ -15,9 +15,9 @@ public class LivingEntityDamageEvent extends Event implements Cancellable
 	private final LivingEntity attacker;
 	private final Projectile projectile;
 	private DamageCause cause;
-	private int damage;
+	private double damage;
 	
-	public LivingEntityDamageEvent(LivingEntity le, LivingEntity a, Projectile p, DamageCause c, int d)
+	public LivingEntityDamageEvent(LivingEntity le, LivingEntity a, Projectile p, DamageCause c, double d)
 	{
 		entity = le;
 		attacker = a;
@@ -46,7 +46,7 @@ public class LivingEntityDamageEvent extends Event implements Cancellable
 		return cause;
 	}
 	
-	public int getDamage()
+	public double getDamage()
 	{
 		return damage;
 	}
@@ -56,7 +56,7 @@ public class LivingEntityDamageEvent extends Event implements Cancellable
 		this.cause = cause;
 	}
 	
-	public void setDamage(int damage)
+	public void setDamage(double damage)
 	{
 		this.damage = damage;
 	}

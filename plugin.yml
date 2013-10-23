@@ -1,5 +1,5 @@
 name: Extra Events
-version: 1.5.2 b2
+version: 1.6.4 b2
 author: coldandtired
 main: eu.sylian.extraevents.ExtraEvents
 description: Adds a few events not found in Bukkit, along with repeating timers
